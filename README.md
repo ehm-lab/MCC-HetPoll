@@ -1,10 +1,10 @@
-# Differential mortality risks associated to PM2.5 components: a multi-country multi-city study.
+# A multi-country analysis of differential mortality risks of PM2.5 components
 
 [![DOI](https://zenodo.org/badge/262352027.svg)](https://zenodo.org/doi/10.5281/zenodo.11210101)
 
 R code and results attached to the publication:
 
-Masselot P, et al. Differential mortality risks associated to PM2.5 components: a multi-country multi-city study. *Epidemiology*. In press.
+Masselot P, Sera F, Schneider R, ..., Gasparrini A. Differential mortality risks associated to PM2.5 components: a multi-country multi-city study. *Epidemiology*. 2022;33(2):167-175 (https://doi.org/10.1097/ede.0000000000001455)
 
 ### Data and Results
 
