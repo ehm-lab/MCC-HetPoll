@@ -4,7 +4,7 @@
 
 R code and results attached to the publication:
 
-Masselot P, et al. (2022) Differential mortality risks associated to PM2.5 components: a multi-country multi-city study. *Epidemiology*. **33-2**. [DOI:10.1097/EDE.0000000000001455](https://doi.org/10.1097/EDE.0000000000001455)
+Masselot P, Sera F, Schneider R, ..., Gasparrini A. Differential mortality risks associated to PM2.5 components: a multi-country multi-city study. *Epidemiology*. 2022;33(2):167-175 (https://doi.org/10.1097/ede.0000000000001455)
 
 ### Data
 
