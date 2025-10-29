@@ -183,5 +183,3 @@ dlist_spec <- dlist_spec[!excl]
 dlist_orig <- dlist_orig[!excl]
 cities <- cities[!excl,]
 countries <- countries[countries$country %in% cities$country,]
-
-save.image("Data/0_Data.RData")

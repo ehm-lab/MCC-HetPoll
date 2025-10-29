@@ -45,5 +45,9 @@ Test*
 
 # Other
 *Redaction/
-Data/
 Other_Code/
+
+# Data
+Data/*.RData
+Data/MCC_PM_SPEC_New
+Metadatamccfinal20200504.csv

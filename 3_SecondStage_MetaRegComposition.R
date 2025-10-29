@@ -13,32 +13,43 @@ library(fields)
 library(maps)
 library(mapdata)
 
+#-------------------------------------
+#   Load data
+#-------------------------------------
 
-load("Data/2_FirstStageResults.RData")
+# Results from first-stage and city-level data
+cities <- read.csv(file = "Data/cities_dat.csv")
+
+# PM composition data
+tot_spec <- read.csv(file = "Data/PMcomponents.csv")
 
 #-------------------------------------
 #   Preparing constituent objects
 #-------------------------------------
 
 # Components and labels
-spec_inds <- grep("PM25", colnames(dlist_spec[[1]]))
+spec_inds <- grep("PM25", colnames(tot_spec))
 spec_names <- c("SO4", "NH4", "NO3", "BC", "OC", "SS", "DUST")
 spec_labs <- c(expression(SO[4]^{"2-"}), expression(NH[4]^{"+"}), 
   expression(NO[3]^{"-"}), "BC", "OC", "Sea salt", "Dust")
 spec_pal <- c(2, 6, 4, 1, 3, 5, 7)
 
 # Mean per city
-mean_comp <- sapply(dlist_spec, function(x){
-  # Zero value imputation as in Martín-Fernández et al. (2003)
-  imp <- multRepl(x[,spec_inds], label = 0, dl = rep(1e-5, 7))
+mean_comp <- tapply(tot_spec, tot_spec$city, function(x){
+  # Zero value imputation as in Mart?n-Fern?ndez et al. (2003)
+  imp <- multRepl(x[,spec_inds], label = 0, dl = rep(1e-5, 7),
+    z.warning = 1, z.delete = F)
   # Transformation to compositional object
   xc <- acomp(imp)
   # Compositional mean (pass through the irl transformation)
   mean(xc)
 })
-mean_comp <- t(mean_comp)
+mean_comp <- do.call(rbind, mean_comp)
 p <- ncol(mean_comp)
 colnames(mean_comp) <- spec_names
+
+# Reordering
+mean_comp <- mean_comp[cities$city,]
 
 # Transforming as ALR
 alr_comp <- alr(mean_comp)
@@ -47,6 +58,9 @@ alr_comp <- alr(mean_comp)
 #   PC Scores of MCC indicators
 #-------------------------------------
 
+# Get indicators
+indic_names <- c("oldpopprop", "GDP", "avgtmean", 
+  "totalrange", "E_GR_AV00", "E_GR_AV14", "B00", "B15")
 indic_form <- sprintf("~ %s", paste(indic_names, collapse = " + "))
 
 # PCA
@@ -61,7 +75,7 @@ indicators <- pca_indic$x[,1:2]
 #-------------------------------------
 
 # Model with ALR as meta-predictors
-metamod <- mixmeta(coefall ~ alr_comp + indicators, vcovall, 
+metamod <- mixmeta(coef ~ alr_comp + indicators, var, 
   random = ~ 1|country/city, data = cities, method = "reml", subset = conv)
 
 # Q and I2 statistics  
@@ -72,8 +86,8 @@ summary(metamod)
 #-------------------------------------
 
 # Compute RRs
-BLUPall <- rep(NA, nrow(coefall))
-BLUPall[conv] <- exp(blup(metamod))
+BLUPall <- rep(NA, nrow(cities))
+BLUPall[cities$conv] <- exp(blup(metamod))
 
 # Extremes
 cities[which.max(BLUPall),]
@@ -81,51 +95,6 @@ cities[which.min(BLUPall),]
 
 # Number of RR > 1
 sum(BLUPall > 1, na.rm = T)
-
-#-------------------------------------
-# Figure 1: Map with BLUPS
-#-------------------------------------
-
-# Compute average PM2.5
-mean_pm <- sapply(dlist, function(d) mean(d$pm25, na.rm = T))
-
-# Create colorscale based on RR
-cutoff <- seq(0.975, 1.025, by = 0.005)
-labels <- paste0(paste0(cutoff[-length(cutoff)], "-", cutoff[-1]))
-citycat <- cut(BLUPall, cutoff, labels = labels, include.lowest = T)
-pal <- tim.colors(length(labels))
-
-# Create point size based on mean PM2.5
-ptsiz_rng <- c(.5, 2.5)
-mean_scale <- (mean_pm - min(mean_pm)) / (diff(range(mean_pm)))
-pt_size <- mean_scale * diff(ptsiz_rng) + ptsiz_rng[1]
-pm_scale <- pretty(mean_pm)
-size_scale <- (pm_scale - min(mean_pm)) / (diff(range(mean_pm))) * 
-  diff(ptsiz_rng) + ptsiz_rng[1]
-
-#---- Draw map
-x11(width = 10)
-map("worldHires", mar=c(0,0,0,0), col = grey(0.95),
-    myborder = 0, fill = T, border = grey(0.5), lwd = 0.3)
-# Add points with size = RR and colorscale for mean PM2.5
-points(cities$long, cities$lat, pch = 21, cex = pt_size, bg = pal[citycat])
-# Scale and legend
-map.scale(-5, -50, ratio = F, cex = 0.7, relwidth = 0.1)
-rect(par("usr")[1], 45, -129, -70, border = NA, col = "white")
-lg <- legend(-175, 40, labels, pt.cex = 1.2, bg = "white",
-  pch = 21, pt.bg = pal, box.col = "white", cex = 0.7, inset = 0.02,
-  title = expression(paste("Predicted RR (10 ", mu, "g/", m^3, ")")), 
-  title.adj = 0
-)
-legend(lg$rect$left, lg$rect$top - lg$rect$h, pm_scale, inset = 0.02, 
-  pch = 21, pt.cex = size_scale, pt.bg = "grey",box.col = "white", cex = 0.7,   
-  title = expression(paste("Mean ", PM[2.5], " concentration (", 
-    mu, "g/", m^3, ")")),
-  bg = "white", title.adj = 0, y.intersp = 1.5, xjust = 0, 
-  ncol = length(pm_scale)
-)
-
-dev.print(pdf, file = "Results/Figure1.pdf")
 
 #-------------------------------------
 #  Get meta-coefficients
@@ -199,80 +168,18 @@ preds_obs <- preds
 preds_obs[!is_obs] <- NA
 
 #-------------------------------------
-#  Figure 3: Meta-regression resuls
-#-------------------------------------
-
-# Panel matrix
-pm <- rbind(c(9, rep(10, 3)), 
-  cbind(1, matrix(c(2:7, 0, 8, 0), nrow = 3, byrow = T)))
-
-# Initialize plot
-x11(height = 10, width = 15)
-par(mar = c(5, 6, 3, 1), cex.main = 1.5, cex.lab = 1.2)
-layout(pm, width = c(.4, .2, .2, .2), height = c(.1, .3, .3, .3))
-
-#----- Panel A: meta-coefficients
-
-plot(exp(coef_est), -seq_len(7), 
-  xlab = "Relative Excess Risk", ylab = "", cex.lab = 1.3,
-  axes = F, xlim = range(c(exp(lo_est), exp(up_est))))
-abline(v = 1, lty = 2)
-segments(exp(lo_est), -seq_len(7), exp(up_est), -seq_len(7), lwd = 2,
-  col = grey(.2))
-points(exp(coef_est), -seq_len(7), cex = 3, 
-  pch = ifelse(sig_est, 15, 16), col = spec_pal)
-axis(1, cex.axis = 1.1)
-axis(2, at = -seq_len(7), labels = spec_labs, 
-  las = 1, hadj = 1, lwd.ticks = 0, lwd = 0, cex.axis = 1.5)
-box()
-
-#----- Panel B: predicted values
-par(mar = c(5, 4, 3, 1))
-for (j in seq_len(p)){
-  # Initiate an empty plot with labels
-  plot(0, 0, col = NA, xlim = 100 * range(mean_comp), 
-    ylim = c(min(plo, na.rm = T), max(pup, na.rm = T)),
-    ylab = "RR", xlab = "Proportion (%)",
-    main = bquote(bold(.(spec_labs[j][[1]]))))
-  # Draw prediction interval
-  polygon(100 * c(cseq[!is_obs[,j]], rev(cseq[!is_obs[,j]])), 
-    c(plo[!is_obs[,j],j], rev(pup[!is_obs[,j],j])), 
-    col = adjustcolor(spec_pal[j], .3), border = NA, density = 20)
-  polygon(100 * c(cseq[is_obs[,j]], rev(cseq[is_obs[,j]])), 
-    c(plo[is_obs[,j],j], rev(pup[is_obs[,j],j])), 
-    col = adjustcolor(spec_pal[j], .2), border = NA)
-  # Add prediction
-  lines(100 * cseq, preds[,j], lwd = 1, col = spec_pal[j])
-  lines(100 * cseq[is_obs[,j]], preds[is_obs[,j],j], lwd = 3, col = spec_pal[j])
-  # Add lines indicating observed range
-  abline(v = 100 * range(cseq[is_obs[,j]]), lty = 2)
-  abline(h = 1)
-}
-
-#----- Add letters for plots
-par(mar = rep(0, 4), cex.main = 1.5, cex.lab = 1.2)
-plot.new()
-text(par("usr")[1], par("usr")[3], "A", cex = 3, adj = c(0, 0), xpd = T)
-
-plot.new()
-text(par("usr")[1], par("usr")[3], "B", cex = 3, adj = c(0, 0), xpd = T)
-
-#----- Save
-dev.print(pdf, file = "Results/Figure3.pdf")
-
-#-------------------------------------
 #  Comparison with nested models
 #-------------------------------------
 
 # Apply model with only indicator PC
-metaindic <- mixmeta(coefall ~ indicators, vcovall, 
-  random = ~ 1|country/city,
+metaindic <- mixmeta(coef ~ indicators, var, random = ~ 1|country/city,
   data = cities, method = "reml", subset = conv)
 
 # Apply null model: no meta-predictor
-metanull <- mixmeta(coefall, vcovall, random = ~ 1|country/city,
+metanull <- mixmeta(coef, var, random = ~ 1|country/city,
   data = cities, method = "reml", subset = conv)
 
+# Put together
 allmodels <- list(full = metamod, indic = metaindic, null = metanull)
 
 #--- create comparison table ---
@@ -301,9 +208,4 @@ compar_tab$Wald_pvalue <- c(full_wald$pvalue, indic_wald$pvalue, NA)
 #---- Export Table 2
 write.table(compar_tab, file = "Results/Table2.csv", quote = F,
   row.names = F, sep = ",")
-  
-#-------------------------------------
-#  Save results
-#-------------------------------------
 
-save.image("Data/3_MetaResults.RData")

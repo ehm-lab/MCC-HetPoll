@@ -6,17 +6,11 @@
 #####################################################################
 
 library(Ternary)
-library(compositions)
-library(zCompositions)
-library(mixmeta)
-library(fields)
 library(colorspace)
 library(fda)
 
-load("Data/3_MetaResults.RData")
-
 #-------------------------------------
-#  Supplemental Material A: Indicators PCA
+#  Supplemental Material B: Indicators PCA
 #-------------------------------------
 
 var_prop <- 100 * summary(pca_indic)$importance[2,]
@@ -59,11 +53,11 @@ legend("topright", legend = unique(cities$region),
 dev.print(png, filename = "Results/eFigure1.png", res = 1000, units = "in")
 
 #-------------------------------------
-#  Supplemental Material B: Residual Analysis
+#  Supplemental Material C: Residual Analysis
 #-------------------------------------
 
 resvec <- rep(NA, nrow(cities))
-resvec[conv] <- residuals(metamod)
+resvec[cities$conv] <- residuals(metamod)
 
 #---- Normality of residuals ----
 x11()
@@ -75,6 +69,9 @@ dev.print(png, file = "Results/eFigure2.png", res = 1000, units = "in")
 #---- Plot residuals by region ----
 
 # Organise by regions
+cities$region <- factor(cities$region, levels = c("North America", 
+  "Central America", "South America", "North Europe", "Central Europe",
+  "South Europe", "East Asia", "Australia"))
 nregion <- length(unique(cities$region))
 reg_ord <- order(cities$region)
 cities_ord <- cities[reg_ord,]
@@ -120,9 +117,8 @@ cities[res_sort[1:3],]
 # Positive residuals
 cities[res_sort[nrow(cities) - 0:2],]
 
-
 #-------------------------------------
-#  Supplemental Material C: Alternative representation of results
+#  Supplemental Material D: Alternative representation of results
 #-------------------------------------
 
 #----- Figure S5: Predictions on the same panel -----
@@ -212,17 +208,36 @@ text(0, .92, "RR", xpd = T, cex = 1.5)
 
 dev.print(png, file = "Results/eFigure6.png", res = 1000, units = "in")
 
+#------------------------------------------
+#  Supplemental E
+#------------------------------------------
+
+#----- Total variation matrix -----
+
+var_mat <- variation(acomp(mean_comp))
+spec_labs[6] <- expression("SS")
+colnames(var_mat) <- rownames(var_mat) <- paste(":", spec_labs) 
+
+
+# Color palette
+colpal <- colorRampPalette(c('#FFFFFF', '#D1E5F0', '#92C5DE',
+  '#4393C3', '#2166AC', '#053061'))(20)
+
+x11()
+corrplot.mixed(var_mat, is.corr = F, tl.col = spec_pal, tl.cex = 1.5,
+  lower.col = colpal, upper.col = colpal)
+
+dev.print(png, file = "Results/eFigure7.png", res = 1000, units = "in")
 
 #-------------------------------------
 # Table S2 : Correlation table between total pm and absolute components
 #-------------------------------------
 
 # Correlation between absolute components and total_pm
-tot_spec <- do.call(rbind, dlist_spec)[,spec_inds]
-cormat <- cor(rowSums(tot_spec), tot_spec)
+cormat <- cor(rowSums(tot_spec[, spec_inds]), tot_spec[, spec_inds])
 
 # Correlation between relative components and mean_pm
-cormat <- rbind(cormat, cor(mean_pm, mean_comp))
+cormat <- rbind(cormat, cor(cities$mean_pm, mean_comp))
 
 # Export
 rownames(cormat) <- c("Absolute", "Relative")

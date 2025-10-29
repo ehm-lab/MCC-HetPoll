@@ -7,8 +7,7 @@
 
 library(dlnm)
 library(splines)
-
-load("Data/0_Data.RData")
+library(dplyr)
 
 #-------------------------------------
 # Set up empty objects to save results
@@ -16,7 +15,7 @@ load("Data/0_Data.RData")
 
 # Coefficients
 coefall <- matrix(NA, nrow(cities), 1, dimnames = list(cities$city))
-redall <- list()
+redall <- vector("list", nrow(cities))
 
 # Vcov matrices
 vcovall <- vector("list", nrow(cities))
@@ -24,7 +23,11 @@ vcovall <- vector("list", nrow(cities))
 # Convergence indicator
 conv <- rep(NA, nrow(cities))
 
-names(vcovall) <- names(conv) <- cities$city
+# To store total PM
+mean_pm <- rep(NA, nrow(cities))
+
+# Names
+names(vcovall) <- names(conv) <- names(mean_pm) <- cities$city
 
 #-------------------------------------
 # Model parameters
@@ -69,7 +72,20 @@ for(i in seq(length(dlist))) {
   redall[[i]] <- crosspred(cbp, model, cen = cen, at = 10) # Overall
   coefall[i,] <- redall[[i]]$allfit
   vcovall[[i]] <- redall[[i]]$allse^2
+  mean_pm[i] <- mean(citydat$pm25, na.rm = T)
 }
 
+#-------------------------------------
 # Save results
-save.image("Data/2_FirstStageResults.RData")
+#-------------------------------------
+
+# Put 1st stage results into a nice table
+cities <- mutate(cities, coef = coefall, var = unlist(vcovall), conv = conv,
+  mean_pm = mean_pm)
+
+# Export it
+write.csv(cities, file = "Data/cities_dat.csv", quote = F, row.names = F)
+
+# Also export composition data
+tot_spec <- do.call(rbind, dlist_spec)
+write.csv(tot_spec, file = "Data/PMcomponents.csv", quote = F, row.names = F)

@@ -4,27 +4,24 @@
 
 R code and results attached to the publication:
 
-Masselot P, et al. Differential mortality risks associated to PM2.5 components: a multi-country multi-city study. *Epidemiology*. In press.
+Masselot P, et al. (2022) Differential mortality risks associated to PM2.5 components: a multi-country multi-city study. *Epidemiology*. **33-2**. [DOI:10.1097/EDE.0000000000001455](https://doi.org/10.1097/EDE.0000000000001455)
 
-### Data and Results
+### Data
 
-**Data are not available currently due to restricted data sharing agreement between the collaborators of this study. Therefore, the code is not fully reproducible.**
+Mortality data are not available currently due to restricted data sharing agreement between the collaborators of this study. Therefore, **only scripts 3 to 5 are fully reproducible**.
 
-Data are normally included in a subfolder *Data*. It should contain:
-- Mortality and pollution data, stored in a list of city-specific data.frames. Also contains a descriptive data.frame with one line for each city.
-- PM2.5 components, stored in one csv files per year of data. Each csv file contains one line per city.
-- City-specific characteristics, stored as a data.frame with one line per city.
+The *Data* folder contains data needed to run scripts 3 to 5, *i.e.* results from the first-stage city-specific models and PM composition data.
 
 ### R code
 
 The R code to reproduce the analysis is available. Scripts are meant to be executed in order:
 
 - *0_PrepData.R* Loads and and links mortality, PM2.5, composition and city-specific characteristics. Performs city selection.
-- *1a_DataSummary.R* Creates Table 1 providing descriptive statistics.
-- *1b_CompositionSummary.R* Provides descriptive statistics of PM2.5 compositions. Produces Figure 2.
+- *1_DataSummary.R* Creates Table 1 providing descriptive statistics.
 - *2_FirstStage.R* Runs the first-stage model on each selected city to produce city-level relative risks.
-- *3_SecondStage_MetaRegComposition.R* Pools first-stage results in a meta analysis including city-specific compositions and socio-economic indicators. Produces Figures 1 and 3 as well as several eFigures.
-- *4_SupplementaryResults.R* Produces several supplementary results and eFigures, including the PCA summary and residuals analysis.
+- *3_SecondStage_MetaRegComposition.R* Pools first-stage results in a meta analysis including city-specific compositions and socio-economic indicators. 
+- *4_Plots.R* Produces the figures of the paper.
+- *5_SupplementaryResults.R* Produces supplementary results and eFigures.
 
 ### Results
 
